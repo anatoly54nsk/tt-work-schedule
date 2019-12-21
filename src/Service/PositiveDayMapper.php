@@ -22,7 +22,7 @@ class PositiveDayMapper extends DayMapper
         $intervals = array_merge($day->getTimeRanges(), $this->intervals);
         if (!empty($intervals)) {
             $intervals = $this->directSort($intervals);
-            $day->replaceTimeRanges($this->mergeIntervals($intervals));
+            $day->replaceTimeRanges($this->mergeIntervals($intervals, $day));
         }
         return $day;
     }

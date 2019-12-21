@@ -6,6 +6,7 @@ namespace App\Tests\Service;
 
 use App\Entity\Day;
 use App\Entity\IDay;
+use App\Entity\ITimeInterval;
 use App\Entity\TimeInterval;
 use App\Service\IDayMapper;
 use App\Service\NegativeDayMapper;
@@ -37,13 +38,15 @@ class NegativeDayMapperTest extends TestCase
      * @param $dayIntervals
      * @param $mapperIntervals
      * @param $expected
+     * @param $dt
      * @throws Exception
      */
-    public function testMapWithoutPrevious($dayIntervals, $mapperIntervals, $expected)
+    public function testMapWithoutPrevious($dayIntervals, $mapperIntervals, $expected, $dt)
     {
         /** @var IDay | MockObject $day */
         $day = $this->createMock(Day::class);
         $day->expects($this->once())->method('getTimeRanges')->willReturn($dayIntervals);
+        $day->method('__get')->with('dt')->willReturn($dt);
         $day->expects($this->once())->method('replaceTimeRanges')->with($expected);
 
         $mapper = new NegativeDayMapper($mapperIntervals);
@@ -54,107 +57,139 @@ class NegativeDayMapperTest extends TestCase
     public function data(): Generator
     {
         $dt = (new DateTimeImmutable())->modify('midnight');
+        $dayIntervals = [
+            new TimeInterval('00:00', 3, ITimeInterval::UNITS_HOUR, $dt),
+            new TimeInterval('05:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+            new TimeInterval('08:00', 4, ITimeInterval::UNITS_HOUR, $dt),
+            new TimeInterval('14:00', 6, ITimeInterval::UNITS_HOUR, $dt),
+        ];
         yield [
-            'dayIntervals' => [
-                new TimeInterval($dt, $dt->modify('+3 hours')),
-                new TimeInterval($dt->modify('+5 hours'), $dt->modify('+6 hours')),
-                new TimeInterval($dt->modify('+8 hours'), $dt->modify('+12 hours')),
-                new TimeInterval($dt->modify('+14 hours'), $dt->modify('+20 hours')),
-            ],
+            'dayIntervals' => $dayIntervals,
             'mapperIntervals' => [
-                new TimeInterval($dt->modify('+2 hours'), $dt->modify('+9 hours')),
-                new TimeInterval($dt->modify('+10 hours'), $dt->modify('+11 hours')),
-                new TimeInterval($dt->modify('+13 hours'), $dt->modify('+19 hours')),
-                new TimeInterval($dt->modify('+21 hours'), $dt->modify('+23 hours')),
+                new TimeInterval('02:00', 7, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('13:00', 6, ITimeInterval::UNITS_HOUR, $dt),
             ],
             'expected' => [
-                new TimeInterval($dt, $dt->modify('+2 hours')),
-                new TimeInterval($dt->modify('+9 hours'), $dt->modify('+10 hours')),
-                new TimeInterval($dt->modify('+11 hours'), $dt->modify('+12 hours')),
-                new TimeInterval($dt->modify('+19 hours'), $dt->modify('+20 hours')),
+                new TimeInterval('00:00', 120, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('09:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('11:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('19:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
             ],
-
+            'dt' => $dt,
+        ];
+        yield [
+            'dayIntervals' => $dayIntervals,
+            'mapperIntervals' => [
+                new TimeInterval('02:00', 7, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('16:00', 2, ITimeInterval::UNITS_HOUR, $dt),
+            ],
+            'expected' => [
+                new TimeInterval('00:00', 120, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('09:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('11:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('14:00', 120, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('18:00', 120, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'dt' => $dt,
+        ];
+        yield [
+            'dayIntervals' => $dayIntervals,
+            'mapperIntervals' => [
+                new TimeInterval('02:00', 7, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('13:00', 6, ITimeInterval::UNITS_HOUR, $dt),
+            ],
+            'expected' => [
+                new TimeInterval('00:00', 120, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('09:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('11:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('19:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'dt' => $dt,
+        ];
+        yield [
+            'dayIntervals' => $dayIntervals,
+            'mapperIntervals' => [
+                new TimeInterval('02:00', 7, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('13:00', 6, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('21:00', 2, ITimeInterval::UNITS_HOUR, $dt),
+            ],
+            'expected' => [
+                new TimeInterval('00:00', 120, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('09:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('11:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('19:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'dt' => $dt,
+        ];
+        yield [
+            'dayIntervals' => $dayIntervals,
+            'mapperIntervals' => [
+                new TimeInterval('02:00', 7, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('13:00', 6, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('12:00', 11, ITimeInterval::UNITS_HOUR, $dt),
+            ],
+            'expected' => [
+                new TimeInterval('00:00', 120, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('09:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('11:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'dt' => $dt,
+        ];
+        yield [
+            'dayIntervals' => $dayIntervals,
+            'mapperIntervals' => [
+                new TimeInterval('02:00', 7, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('16:00', 7, ITimeInterval::UNITS_HOUR, $dt),
+            ],
+            'expected' => [
+                new TimeInterval('00:00', 120, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('09:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('11:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('14:00', 120, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'dt' => $dt,
         ];
         yield [
             'dayIntervals' => [
-                new TimeInterval($dt, $dt->modify('+3 hours')),
-                new TimeInterval($dt->modify('+5 hours'), $dt->modify('+6 hours')),
-                new TimeInterval($dt->modify('+8 hours'), $dt->modify('+12 hours')),
-                new TimeInterval($dt->modify('+14 hours'), $dt->modify('+20 hours')),
+                new TimeInterval('02:30', 7, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('16:00', 150, ITimeInterval::UNITS_MINUTE, $dt),
             ],
             'mapperIntervals' => [
-                new TimeInterval($dt->modify('+2 hours'), $dt->modify('+9 hours')),
-                new TimeInterval($dt->modify('+10 hours'), $dt->modify('+11 hours')),
-                new TimeInterval($dt->modify('+13 hours'), $dt->modify('+19 hours')),
-                new TimeInterval($dt->modify('+12 hours'), $dt->modify('23 hours')),
+                new TimeInterval('02:00', 30, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('10:30', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('16:00', 30, ITimeInterval::UNITS_MINUTE, $dt),
             ],
             'expected' => [
-                new TimeInterval($dt, $dt->modify('+2 hours')),
-                new TimeInterval($dt->modify('+9 hours'), $dt->modify('+10 hours')),
-                new TimeInterval($dt->modify('+11 hours'), $dt->modify('+12 hours')),
+                new TimeInterval('02:30', 420, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('10:00', 30, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('16:30', 120, ITimeInterval::UNITS_MINUTE, $dt),
             ],
-
+            'dt' => $dt,
         ];
         yield [
             'dayIntervals' => [
-                new TimeInterval($dt, $dt->modify('+3 hours')),
-                new TimeInterval($dt->modify('+5 hours'), $dt->modify('+6 hours')),
-                new TimeInterval($dt->modify('+8 hours'), $dt->modify('+12 hours')),
-                new TimeInterval($dt->modify('+14 hours'), $dt->modify('+20 hours')),
+                new TimeInterval('16:00', 150, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('02:30', 7, ITimeInterval::UNITS_HOUR, $dt),
             ],
             'mapperIntervals' => [
-                new TimeInterval($dt->modify('+2 hours'), $dt->modify('+9 hours')),
-                new TimeInterval($dt->modify('+10 hours'), $dt->modify('+11 hours')),
-                new TimeInterval($dt->modify('+13 hours'), $dt->modify('+19 hours')),
+                new TimeInterval('10:30', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('02:00', 30, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('16:00', 30, ITimeInterval::UNITS_MINUTE, $dt),
             ],
             'expected' => [
-                new TimeInterval($dt, $dt->modify('+2 hours')),
-                new TimeInterval($dt->modify('+9 hours'), $dt->modify('+10 hours')),
-                new TimeInterval($dt->modify('+11 hours'), $dt->modify('+12 hours')),
-                new TimeInterval($dt->modify('+19 hours'), $dt->modify('+20 hours')),
+                new TimeInterval('02:30', 420, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('10:00', 30, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('16:30', 120, ITimeInterval::UNITS_MINUTE, $dt),
             ],
-
-        ];
-        yield [
-            'dayIntervals' => [
-                new TimeInterval($dt, $dt->modify('+3 hours')),
-                new TimeInterval($dt->modify('+5 hours'), $dt->modify('+6 hours')),
-                new TimeInterval($dt->modify('+8 hours'), $dt->modify('+12 hours')),
-                new TimeInterval($dt->modify('+14 hours'), $dt->modify('+20 hours')),
-            ],
-            'mapperIntervals' => [
-                new TimeInterval($dt->modify('+2 hours'), $dt->modify('+9 hours')),
-                new TimeInterval($dt->modify('+10 hours'), $dt->modify('+11 hours')),
-                new TimeInterval($dt->modify('+16 hours'), $dt->modify('+18 hours')),
-            ],
-            'expected' => [
-                new TimeInterval($dt, $dt->modify('+2 hours')),
-                new TimeInterval($dt->modify('+9 hours'), $dt->modify('+10 hours')),
-                new TimeInterval($dt->modify('+11 hours'), $dt->modify('+12 hours')),
-                new TimeInterval($dt->modify('+14 hours'), $dt->modify('+16 hours')),
-                new TimeInterval($dt->modify('+18 hours'), $dt->modify('+20 hours')),
-            ],
-
-        ];
-        yield [
-            'dayIntervals' => [
-                new TimeInterval($dt, $dt->modify('+3 hours')),
-                new TimeInterval($dt->modify('+5 hours'), $dt->modify('+6 hours')),
-                new TimeInterval($dt->modify('+8 hours'), $dt->modify('+12 hours')),
-                new TimeInterval($dt->modify('+14 hours'), $dt->modify('+20 hours')),
-            ],
-            'mapperIntervals' => [
-                new TimeInterval($dt->modify('+2 hours'), $dt->modify('+9 hours')),
-                new TimeInterval($dt->modify('+10 hours'), $dt->modify('+11 hours')),
-                new TimeInterval($dt->modify('+16 hours'), $dt->modify('+23 hours')),
-            ],
-            'expected' => [
-                new TimeInterval($dt, $dt->modify('+2 hours')),
-                new TimeInterval($dt->modify('+9 hours'), $dt->modify('+10 hours')),
-                new TimeInterval($dt->modify('+11 hours'), $dt->modify('+12 hours')),
-                new TimeInterval($dt->modify('+14 hours'), $dt->modify('+16 hours')),
-            ],
-
+            'dt' => $dt,
         ];
     }
 }

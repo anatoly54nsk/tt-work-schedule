@@ -4,10 +4,10 @@
 namespace App\Service;
 
 
+use App\Entity\IDay;
 use App\Entity\ITimeInterval;
 use App\Entity\TimeInterval;
 use DateTimeImmutable;
-use Exception;
 
 abstract class DayMapper implements IDayMapper
 {
@@ -51,27 +51,30 @@ abstract class DayMapper implements IDayMapper
 
     /**
      * @param ITimeInterval[] $intervals
+     * @param IDay $day
      * @return ITimeInterval[]
-     * @throws Exception
      */
-    protected function mergeIntervals(array $intervals)
+    protected function mergeIntervals(array $intervals, IDay $day = null)
     {
         $result = [];
-        $current = array_shift($intervals);
-        foreach ($intervals as $interval) {
-            if ($interval->getStart() > $current->getEnd()) {
-                $result[] = $current;
-                $current = $interval;
-                continue;
+        if (count($intervals) > 0) {
+            $current = array_shift($intervals);
+            foreach ($intervals as $interval) {
+                if ($day) {
+                    $current->setDate($day->dt);
+                    $interval->setDate($day->dt);
+                }
+                if ($current->getEnd() < $interval->getStart()) {
+                    $result[] = $this->getNewInterval($current->getStart(), $current->getEnd());
+                    $current = $this->getNewInterval($interval->getStart(), $interval->getEnd());
+                    continue;
+                }
+                $intervalStart = $current->getStart() < $interval->getStart() ? $current->getStart() : $interval->getStart();
+                $intervalEnd = $current->getEnd() < $interval->getEnd() ? $interval->getEnd() : $current->getEnd();
+                $current = $this->getNewInterval($intervalStart, $intervalEnd);
             }
-            $intervalStart = $current->getStart();
-            $intervalEnd = $current->getEnd();
-            if ($current->getEnd() < $interval->getEnd()) {
-                $intervalEnd = $interval->getEnd();
-            }
-            $current = $this->getNewInterval($intervalStart, $intervalEnd);
+            $result[] = $this->getNewInterval($current->getStart(), $current->getEnd());
         }
-        $result[] = $current;
         return $result;
     }
 
@@ -79,7 +82,12 @@ abstract class DayMapper implements IDayMapper
     {
         $dt = new DateTimeImmutable();
         $start = $dt->setTimestamp($startTimestamp);
-        $end = $dt->setTimestamp($endTimestamp);
-        return new TimeInterval($start, $end);
+        $minutes = ($endTimestamp - $startTimestamp) / 60;
+        return new TimeInterval($start->format(
+            ITimeInterval::FORMAT_TIME),
+            $minutes,
+            ITimeInterval::UNITS_MINUTE,
+            $dt->modify('midnight')
+        );
     }
 }
