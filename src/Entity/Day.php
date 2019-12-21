@@ -10,6 +10,7 @@ use JsonSerializable;
 
 /**
  * @property string day
+ * @property DateTimeImmutable dt
  */
 class Day implements IDay, JsonSerializable
 {
@@ -37,6 +38,9 @@ class Day implements IDay, JsonSerializable
         switch ($name) {
             case 'day':
                 $value = $this->dt->format(self::DAY_FORMAT);
+                break;
+            case 'dt':
+                $value = $this->dt;
                 break;
             default:
                 throw new Exception("Field '{$name}' not exists in Day entity.");
