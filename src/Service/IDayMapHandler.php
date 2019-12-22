@@ -10,7 +10,7 @@ interface IDayMapHandler
 {
     /**
      * @param IDay[] $days
-     * @return array
+     * @return IDay[]
      */
     public function map(array $days): array;
 }
