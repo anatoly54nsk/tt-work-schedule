@@ -12,11 +12,15 @@ use App\Service\IDayMapper;
 use App\Service\PositiveDayMapper;
 use DateTimeImmutable;
 use Exception;
+use Generator;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 class PositiveDayMapperTest extends TestCase
 {
+    /**
+     * @throws Exception
+     */
     public function testPrevious()
     {
         /** @var IDay | MockObject $day */
@@ -53,6 +57,10 @@ class PositiveDayMapperTest extends TestCase
         self::assertInstanceOf(IDay::class, $expectedDay);
     }
 
+    /**
+     * @return Generator
+     * @throws Exception
+     */
     public function data()
     {
         $dt = (new DateTimeImmutable())->modify('midnight');
@@ -118,6 +126,30 @@ class PositiveDayMapperTest extends TestCase
                 new TimeInterval('04:00', 720, ITimeInterval::UNITS_MINUTE, $dt),
             ],
             'dt' => $dt,
+        ];
+        yield [
+            'dayIntervals' => [
+                new TimeInterval('05:00', 1, ITimeInterval::UNITS_HOUR),
+                new TimeInterval('13:00', 3, ITimeInterval::UNITS_HOUR),
+            ],
+            'mapperIntervals' => [
+                new TimeInterval('04:00', 10, ITimeInterval::UNITS_HOUR),
+            ],
+            'expected' => [
+                new TimeInterval('04:00', 720, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+            ],
+            'dt' => $dt->modify('+1 day'),
+        ];
+        yield [
+            'dayIntervals' => [
+                new TimeInterval('05:00', 1, ITimeInterval::UNITS_HOUR),
+            ],
+            'mapperIntervals' => [
+            ],
+            'expected' => [
+                new TimeInterval('05:00', 60, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+            ],
+            'dt' => $dt->modify('+1 day'),
         ];
     }
 }

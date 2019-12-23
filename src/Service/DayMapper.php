@@ -8,6 +8,7 @@ use App\Entity\IDay;
 use App\Entity\ITimeInterval;
 use App\Entity\TimeInterval;
 use DateTimeImmutable;
+use Exception;
 
 abstract class DayMapper implements IDayMapper
 {
@@ -53,6 +54,7 @@ abstract class DayMapper implements IDayMapper
      * @param ITimeInterval[] $intervals
      * @param IDay $day
      * @return ITimeInterval[]
+     * @throws Exception
      */
     protected function mergeIntervals(array $intervals, IDay $day = null)
     {
@@ -73,11 +75,20 @@ abstract class DayMapper implements IDayMapper
                 $intervalEnd = $current->getEnd() < $interval->getEnd() ? $interval->getEnd() : $current->getEnd();
                 $current = $this->getNewInterval($intervalStart, $intervalEnd);
             }
+            if ($day) {
+                $current->setDate($day->dt);
+            }
             $result[] = $this->getNewInterval($current->getStart(), $current->getEnd());
         }
         return $result;
     }
 
+    /**
+     * @param int $startTimestamp
+     * @param int $endTimestamp
+     * @return ITimeInterval
+     * @throws Exception
+     */
     protected function getNewInterval(int $startTimestamp, int $endTimestamp): ITimeInterval
     {
         $dt = new DateTimeImmutable();
@@ -87,7 +98,7 @@ abstract class DayMapper implements IDayMapper
             ITimeInterval::FORMAT_TIME),
             $minutes,
             ITimeInterval::UNITS_MINUTE,
-            $dt->modify('midnight')
+            $start->modify('midnight')
         );
     }
 }

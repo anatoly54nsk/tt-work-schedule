@@ -24,7 +24,7 @@ class NegativeDayMapper extends DayMapper
         $dayRanges = $this->mergeIntervals($dayRanges, $day);
         $mapperRanges = $this->directSort($this->intervals);
         $mapperRanges = $this->mergeIntervals($mapperRanges, $day);
-        $intervals = $this->excludeVariants($dayRanges, $mapperRanges, $day);
+        $intervals = $this->excludeIntervals($dayRanges, $mapperRanges, $day);
         $day->replaceTimeRanges($intervals);
         return $day;
     }
@@ -35,28 +35,38 @@ class NegativeDayMapper extends DayMapper
      * @param IDay $day
      * @return ITimeInterval[]
      */
-    private function excludeVariants(array $positiveIntervals, array $negativeIntervals, IDay $day): array
+    private function excludeIntervals(array $positiveIntervals, array $negativeIntervals, IDay $day): array
     {
         return array_reduce($positiveIntervals, function ($result, $positiveInterval) use (&$negativeIntervals, $day) {
             /** @var ITimeInterval $positiveInterval */
             $positiveInterval->setDate($day->dt);
-            foreach ($negativeIntervals as $negativeInterval) {
-                $negativeInterval->setDate($day->dt);
-                $negativeIntervals = $this->deleteNegInterval($positiveInterval, $negativeInterval, $negativeIntervals);
-                $result = array_merge($result, $this->getIterationResult($positiveInterval, $negativeInterval));
-                $positiveInterval = $this->changePositiveInterval($positiveInterval, $negativeInterval);
-                if (count($negativeIntervals) === 0 && $positiveInterval) {
-                    $result[] = $positiveInterval;
+            if (count($negativeIntervals) > 0) {
+                foreach ($negativeIntervals as $negativeInterval) {
+                    $negativeInterval->setDate($day->dt);
+                    $negativeIntervals = $this->deleteNegInterval($positiveInterval, $negativeInterval, $negativeIntervals);
+                    $result = array_merge($result, $this->getIterationResult($positiveInterval, $negativeInterval));
+                    $positiveInterval = $this->changePositiveInterval($positiveInterval, $negativeInterval);
+                    if (count($negativeIntervals) === 0 && $positiveInterval) {
+                        $result[] = $positiveInterval;
+                    }
+                    if ($positiveInterval) {
+                        continue;
+                    }
+                    break;
                 }
-                if ($positiveInterval) {
-                    continue;
-                }
-                break;
+            } else {
+                $result[] = $this->getNewInterval($positiveInterval->getStart(), $positiveInterval->getEnd());
             }
             return $result;
         }, []);
     }
 
+    /**
+     * @param ITimeInterval $positiveInterval
+     * @param ITimeInterval $negativeInterval
+     * @param array $negativeIntervals
+     * @return ITimeInterval[]
+     */
     private function deleteNegInterval(ITimeInterval $positiveInterval, ITimeInterval $negativeInterval, array $negativeIntervals): array
     {
         if (
@@ -69,6 +79,12 @@ class NegativeDayMapper extends DayMapper
         return $negativeIntervals;
     }
 
+    /**
+     * @param ITimeInterval $positiveInterval
+     * @param ITimeInterval $negativeInterval
+     * @return ITimeInterval[]
+     * @throws Exception
+     */
     private function getIterationResult(ITimeInterval $positiveInterval, ITimeInterval $negativeInterval)
     {
         $result = [];
@@ -80,6 +96,12 @@ class NegativeDayMapper extends DayMapper
         return $result;
     }
 
+    /**
+     * @param ITimeInterval $positiveInterval
+     * @param ITimeInterval $negativeInterval
+     * @return ITimeInterval|null
+     * @throws Exception
+     */
     private function changePositiveInterval(ITimeInterval $positiveInterval, ITimeInterval $negativeInterval)
     {
         $newInterval = null;

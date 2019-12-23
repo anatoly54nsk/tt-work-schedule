@@ -18,6 +18,9 @@ use PHPUnit\Framework\TestCase;
 
 class NegativeDayMapperTest extends TestCase
 {
+    /**
+     * @throws Exception
+     */
     public function testPrevious()
     {
         /** @var IDay | MockObject $day */
@@ -54,6 +57,10 @@ class NegativeDayMapperTest extends TestCase
         self::assertInstanceOf(IDay::class, $expectedDay);
     }
 
+    /**
+     * @return Generator
+     * @throws Exception
+     */
     public function data(): Generator
     {
         $dt = (new DateTimeImmutable())->modify('midnight');
@@ -190,6 +197,53 @@ class NegativeDayMapperTest extends TestCase
                 new TimeInterval('16:30', 120, ITimeInterval::UNITS_MINUTE, $dt),
             ],
             'dt' => $dt,
+        ];
+        yield [
+            'dayIntervals' => [
+                new TimeInterval('16:00', 150, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('02:30', 7, ITimeInterval::UNITS_HOUR, $dt),
+            ],
+            'mapperIntervals' => [
+                new TimeInterval('10:30', 1, ITimeInterval::UNITS_HOUR, $dt),
+                new TimeInterval('02:00', 30, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('16:00', 30, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'expected' => [
+                new TimeInterval('02:30', 420, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('10:00', 30, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('16:30', 120, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'dt' => $dt,
+        ];
+        yield [
+            'dayIntervals' => [
+                new TimeInterval('16:00', 150, ITimeInterval::UNITS_MINUTE),
+                new TimeInterval('10:00', 1, ITimeInterval::UNITS_HOUR),
+                new TimeInterval('02:30', 7, ITimeInterval::UNITS_HOUR),
+            ],
+            'mapperIntervals' => [
+                new TimeInterval('10:30', 1, ITimeInterval::UNITS_HOUR),
+                new TimeInterval('02:00', 30, ITimeInterval::UNITS_MINUTE),
+                new TimeInterval('16:00', 30, ITimeInterval::UNITS_MINUTE),
+            ],
+            'expected' => [
+                new TimeInterval('02:30', 420, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+                new TimeInterval('10:00', 30, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+                new TimeInterval('16:30', 120, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+            ],
+            'dt' => $dt->modify('+1 day'),
+        ];
+        yield [
+            'dayIntervals' => [
+                new TimeInterval('16:00', 150, ITimeInterval::UNITS_MINUTE),
+            ],
+            'mapperIntervals' => [
+            ],
+            'expected' => [
+                new TimeInterval('16:00', 150, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+            ],
+            'dt' => $dt->modify('+1 day'),
         ];
     }
 }
