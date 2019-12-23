@@ -51,6 +51,9 @@ class DayTest extends TestCase
         self::assertEquals([], $this->day->getTimeRanges());
     }
 
+    /**
+     * @throws Exception
+     */
     public function testReplaceTimeRanges()
     {
         self::assertEquals([], $this->day->getTimeRanges());
@@ -66,7 +69,7 @@ class DayTest extends TestCase
     {
         $json = json_encode(
             [
-                'day' => $this->dt->format('Y-m-d'),
+                'day' => $this->dt->format(IDay::DAY_FORMAT),
                 'timeRanges' => []
             ]
         );
