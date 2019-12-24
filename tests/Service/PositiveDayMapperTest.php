@@ -10,6 +10,7 @@ use App\Entity\ITimeInterval;
 use App\Entity\TimeInterval;
 use App\Service\IDayMapper;
 use App\Service\PositiveDayMapper;
+use App\Service\TimeIntervalFactory;
 use DateTimeImmutable;
 use Exception;
 use Generator;
@@ -18,6 +19,16 @@ use PHPUnit\Framework\TestCase;
 
 class PositiveDayMapperTest extends TestCase
 {
+    /**
+     * @var TimeIntervalFactory
+     */
+    private $factory;
+
+    public function setUp()
+    {
+        $this->factory = new TimeIntervalFactory();
+    }
+
     /**
      * @throws Exception
      */
@@ -32,7 +43,7 @@ class PositiveDayMapperTest extends TestCase
         $previousMapper = $this->createMock(PositiveDayMapper::class);
         $previousMapper->expects($this->once())->method('map')->with($day)->willReturn($day);
 
-        $mapper = new PositiveDayMapper([], $previousMapper);
+        $mapper = new PositiveDayMapper([], $this->factory, $previousMapper);
         $mapper->map($day);
     }
 
@@ -52,7 +63,7 @@ class PositiveDayMapperTest extends TestCase
         $day->method('__get')->with('dt')->willReturn($dt);
         $day->expects($this->once())->method('replaceTimeRanges')->with($expected);
 
-        $mapper = new PositiveDayMapper($mapperIntervals);
+        $mapper = new PositiveDayMapper($mapperIntervals, $this->factory);
         $expectedDay = $mapper->map($day);
         self::assertInstanceOf(IDay::class, $expectedDay);
     }
@@ -136,7 +147,8 @@ class PositiveDayMapperTest extends TestCase
                 new TimeInterval('04:00', 10, ITimeInterval::UNITS_HOUR),
             ],
             'expected' => [
-                new TimeInterval('04:00', 720, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+                new TimeInterval('04:00', 720, ITimeInterval::UNITS_MINUTE,
+                    $dt->modify('+1 day')),
             ],
             'dt' => $dt->modify('+1 day'),
         ];
@@ -147,7 +159,8 @@ class PositiveDayMapperTest extends TestCase
             'mapperIntervals' => [
             ],
             'expected' => [
-                new TimeInterval('05:00', 60, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+                new TimeInterval('05:00', 60, ITimeInterval::UNITS_MINUTE,
+                    $dt->modify('+1 day')),
             ],
             'dt' => $dt->modify('+1 day'),
         ];

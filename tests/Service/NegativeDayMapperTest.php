@@ -10,6 +10,7 @@ use App\Entity\ITimeInterval;
 use App\Entity\TimeInterval;
 use App\Service\IDayMapper;
 use App\Service\NegativeDayMapper;
+use App\Service\TimeIntervalFactory;
 use DateTimeImmutable;
 use Exception;
 use Generator;
@@ -18,6 +19,16 @@ use PHPUnit\Framework\TestCase;
 
 class NegativeDayMapperTest extends TestCase
 {
+    /**
+     * @var TimeIntervalFactory
+     */
+    private $factory;
+
+    public function setUp()
+    {
+        $this->factory = new TimeIntervalFactory();
+    }
+
     /**
      * @throws Exception
      */
@@ -32,7 +43,7 @@ class NegativeDayMapperTest extends TestCase
         $previousMapper = $this->createMock(NegativeDayMapper::class);
         $previousMapper->expects($this->once())->method('map')->with($day)->willReturn($day);
 
-        $mapper = new NegativeDayMapper([], $previousMapper);
+        $mapper = new NegativeDayMapper([], $this->factory, $previousMapper);
         $mapper->map($day);
     }
 
@@ -52,7 +63,7 @@ class NegativeDayMapperTest extends TestCase
         $day->method('__get')->with('dt')->willReturn($dt);
         $day->expects($this->once())->method('replaceTimeRanges')->with($expected);
 
-        $mapper = new NegativeDayMapper($mapperIntervals);
+        $mapper = new NegativeDayMapper($mapperIntervals, $this->factory);
         $expectedDay = $mapper->map($day);
         self::assertInstanceOf(IDay::class, $expectedDay);
     }
@@ -228,9 +239,12 @@ class NegativeDayMapperTest extends TestCase
                 new TimeInterval('16:00', 30, ITimeInterval::UNITS_MINUTE),
             ],
             'expected' => [
-                new TimeInterval('02:30', 420, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
-                new TimeInterval('10:00', 30, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
-                new TimeInterval('16:30', 120, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+                new TimeInterval('02:30', 420, ITimeInterval::UNITS_MINUTE,
+                    $dt->modify('+1 day')),
+                new TimeInterval('10:00', 30, ITimeInterval::UNITS_MINUTE,
+                    $dt->modify('+1 day')),
+                new TimeInterval('16:30', 120, ITimeInterval::UNITS_MINUTE,
+                    $dt->modify('+1 day')),
             ],
             'dt' => $dt->modify('+1 day'),
         ];
@@ -241,7 +255,8 @@ class NegativeDayMapperTest extends TestCase
             'mapperIntervals' => [
             ],
             'expected' => [
-                new TimeInterval('16:00', 150, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+                new TimeInterval('16:00', 150, ITimeInterval::UNITS_MINUTE,
+                    $dt->modify('+1 day')),
             ],
             'dt' => $dt->modify('+1 day'),
         ];

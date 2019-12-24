@@ -6,8 +6,6 @@ namespace App\Service;
 
 use App\Entity\IDay;
 use App\Entity\ITimeInterval;
-use App\Entity\TimeInterval;
-use DateTimeImmutable;
 use Exception;
 
 abstract class DayMapper implements IDayMapper
@@ -20,15 +18,21 @@ abstract class DayMapper implements IDayMapper
      * @var IDayMapper
      */
     protected $previous;
+    /**
+     * @var ITimeIntervalFactory
+     */
+    protected $intervalFactory;
 
     /**
      * @param ITimeInterval[] $intervals
+     * @param ITimeIntervalFactory $intervalFactory
      * @param IDayMapper|null $previous
      */
-    public function __construct(array $intervals, IDayMapper $previous = null)
+    public function __construct(array $intervals, ITimeIntervalFactory $intervalFactory, IDayMapper $previous = null)
     {
         $this->intervals = $intervals;
         $this->previous = $previous;
+        $this->intervalFactory = $intervalFactory;
     }
 
     public function setPrevious(IDayMapper $previous)
@@ -67,38 +71,20 @@ abstract class DayMapper implements IDayMapper
                     $interval->setDate($day->dt);
                 }
                 if ($current->getEnd() < $interval->getStart()) {
-                    $result[] = $this->getNewInterval($current->getStart(), $current->getEnd());
-                    $current = $this->getNewInterval($interval->getStart(), $interval->getEnd());
+                    $result[] = $this->intervalFactory->create($current->getStart(), $current->getEnd());
+                    $current = $this->intervalFactory->create($interval->getStart(), $interval->getEnd());
                     continue;
                 }
-                $intervalStart = $current->getStart() < $interval->getStart() ? $current->getStart() : $interval->getStart();
+                $intervalStart = $current->getStart() < $interval->getStart() ?
+                    $current->getStart() : $interval->getStart();
                 $intervalEnd = $current->getEnd() < $interval->getEnd() ? $interval->getEnd() : $current->getEnd();
-                $current = $this->getNewInterval($intervalStart, $intervalEnd);
+                $current = $this->intervalFactory->create($intervalStart, $intervalEnd);
             }
             if ($day) {
                 $current->setDate($day->dt);
             }
-            $result[] = $this->getNewInterval($current->getStart(), $current->getEnd());
+            $result[] = $this->intervalFactory->create($current->getStart(), $current->getEnd());
         }
         return $result;
-    }
-
-    /**
-     * @param int $startTimestamp
-     * @param int $endTimestamp
-     * @return ITimeInterval
-     * @throws Exception
-     */
-    protected function getNewInterval(int $startTimestamp, int $endTimestamp): ITimeInterval
-    {
-        $dt = new DateTimeImmutable();
-        $start = $dt->setTimestamp($startTimestamp);
-        $minutes = ($endTimestamp - $startTimestamp) / 60;
-        return new TimeInterval($start->format(
-            ITimeInterval::FORMAT_TIME),
-            $minutes,
-            ITimeInterval::UNITS_MINUTE,
-            $start->modify('midnight')
-        );
     }
 }

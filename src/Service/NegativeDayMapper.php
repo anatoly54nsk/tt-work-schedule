@@ -43,7 +43,11 @@ class NegativeDayMapper extends DayMapper
             if (count($negativeIntervals) > 0) {
                 foreach ($negativeIntervals as $negativeInterval) {
                     $negativeInterval->setDate($day->dt);
-                    $negativeIntervals = $this->deleteNegInterval($positiveInterval, $negativeInterval, $negativeIntervals);
+                    $negativeIntervals = $this->deleteNegInterval(
+                        $positiveInterval,
+                        $negativeInterval,
+                        $negativeIntervals
+                    );
                     $result = array_merge($result, $this->getIterationResult($positiveInterval, $negativeInterval));
                     $positiveInterval = $this->changePositiveInterval($positiveInterval, $negativeInterval);
                     if (count($negativeIntervals) === 0 && $positiveInterval) {
@@ -55,7 +59,7 @@ class NegativeDayMapper extends DayMapper
                     break;
                 }
             } else {
-                $result[] = $this->getNewInterval($positiveInterval->getStart(), $positiveInterval->getEnd());
+                $result[] = $this->intervalFactory->create($positiveInterval->getStart(), $positiveInterval->getEnd());
             }
             return $result;
         }, []);
@@ -67,12 +71,18 @@ class NegativeDayMapper extends DayMapper
      * @param array $negativeIntervals
      * @return ITimeInterval[]
      */
-    private function deleteNegInterval(ITimeInterval $positiveInterval, ITimeInterval $negativeInterval, array $negativeIntervals): array
+    private function deleteNegInterval(
+        ITimeInterval $positiveInterval,
+        ITimeInterval $negativeInterval,
+        array $negativeIntervals
+    ): array
     {
         if (
             $negativeInterval->getEnd() <= $positiveInterval->getStart()
-            || ($negativeInterval->getStart() <= $positiveInterval->getStart() && $negativeInterval->getEnd() < $positiveInterval->getEnd())
-            || ($positiveInterval->getStart() < $negativeInterval->getStart() && $negativeInterval->getEnd() < $positiveInterval->getEnd())
+            || ($negativeInterval->getStart() <= $positiveInterval->getStart()
+                && $negativeInterval->getEnd() < $positiveInterval->getEnd())
+            || ($positiveInterval->getStart() < $negativeInterval->getStart()
+                && $negativeInterval->getEnd() < $positiveInterval->getEnd())
         ) {
             array_shift($negativeIntervals);
         }
@@ -89,9 +99,9 @@ class NegativeDayMapper extends DayMapper
     {
         $result = [];
         if ($positiveInterval->getEnd() <= $negativeInterval->getStart()) {
-            $result[] = $this->getNewInterval($positiveInterval->getStart(), $positiveInterval->getEnd());
+            $result[] = $this->intervalFactory->create($positiveInterval->getStart(), $positiveInterval->getEnd());
         } elseif ($positiveInterval->getStart() < $negativeInterval->getStart()) {
-            $result[] = $this->getNewInterval($positiveInterval->getStart(), $negativeInterval->getStart());
+            $result[] = $this->intervalFactory->create($positiveInterval->getStart(), $negativeInterval->getStart());
         }
         return $result;
     }
@@ -107,9 +117,9 @@ class NegativeDayMapper extends DayMapper
         $newInterval = null;
         if ($negativeInterval->getEnd() < $positiveInterval->getEnd()) {
             if ($negativeInterval->getEnd() <= $positiveInterval->getStart()) {
-                $newInterval = $this->getNewInterval($positiveInterval->getStart(), $positiveInterval->getEnd());
+                $newInterval = $this->intervalFactory->create($positiveInterval->getStart(), $positiveInterval->getEnd());
             } else {
-                $newInterval = $this->getNewInterval($negativeInterval->getEnd(), $positiveInterval->getEnd());
+                $newInterval = $this->intervalFactory->create($negativeInterval->getEnd(), $positiveInterval->getEnd());
             }
         }
         return $newInterval;
