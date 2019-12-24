@@ -59,7 +59,7 @@ class NegativeDayMapper extends DayMapper
                     break;
                 }
             } else {
-                $result[] = $this->intervalFactory->create($positiveInterval->getStart(), $positiveInterval->getEnd());
+                $result[] = $this->intervalFactory->createFormTimestamp($positiveInterval->getStart(), $positiveInterval->getEnd());
             }
             return $result;
         }, []);
@@ -99,9 +99,9 @@ class NegativeDayMapper extends DayMapper
     {
         $result = [];
         if ($positiveInterval->getEnd() <= $negativeInterval->getStart()) {
-            $result[] = $this->intervalFactory->create($positiveInterval->getStart(), $positiveInterval->getEnd());
+            $result[] = $this->intervalFactory->createFormTimestamp($positiveInterval->getStart(), $positiveInterval->getEnd());
         } elseif ($positiveInterval->getStart() < $negativeInterval->getStart()) {
-            $result[] = $this->intervalFactory->create($positiveInterval->getStart(), $negativeInterval->getStart());
+            $result[] = $this->intervalFactory->createFormTimestamp($positiveInterval->getStart(), $negativeInterval->getStart());
         }
         return $result;
     }
@@ -117,9 +117,9 @@ class NegativeDayMapper extends DayMapper
         $newInterval = null;
         if ($negativeInterval->getEnd() < $positiveInterval->getEnd()) {
             if ($negativeInterval->getEnd() <= $positiveInterval->getStart()) {
-                $newInterval = $this->intervalFactory->create($positiveInterval->getStart(), $positiveInterval->getEnd());
+                $newInterval = $this->intervalFactory->createFormTimestamp($positiveInterval->getStart(), $positiveInterval->getEnd());
             } else {
-                $newInterval = $this->intervalFactory->create($negativeInterval->getEnd(), $positiveInterval->getEnd());
+                $newInterval = $this->intervalFactory->createFormTimestamp($negativeInterval->getEnd(), $positiveInterval->getEnd());
             }
         }
         return $newInterval;

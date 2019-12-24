@@ -71,19 +71,19 @@ abstract class DayMapper implements IDayMapper
                     $interval->setDate($day->dt);
                 }
                 if ($current->getEnd() < $interval->getStart()) {
-                    $result[] = $this->intervalFactory->create($current->getStart(), $current->getEnd());
-                    $current = $this->intervalFactory->create($interval->getStart(), $interval->getEnd());
+                    $result[] = $this->intervalFactory->createFormTimestamp($current->getStart(), $current->getEnd());
+                    $current = $this->intervalFactory->createFormTimestamp($interval->getStart(), $interval->getEnd());
                     continue;
                 }
                 $intervalStart = $current->getStart() < $interval->getStart() ?
                     $current->getStart() : $interval->getStart();
                 $intervalEnd = $current->getEnd() < $interval->getEnd() ? $interval->getEnd() : $current->getEnd();
-                $current = $this->intervalFactory->create($intervalStart, $intervalEnd);
+                $current = $this->intervalFactory->createFormTimestamp($intervalStart, $intervalEnd);
             }
             if ($day) {
                 $current->setDate($day->dt);
             }
-            $result[] = $this->intervalFactory->create($current->getStart(), $current->getEnd());
+            $result[] = $this->intervalFactory->createFormTimestamp($current->getStart(), $current->getEnd());
         }
         return $result;
     }

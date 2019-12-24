@@ -14,21 +14,58 @@ use PHPUnit\Framework\TestCase;
 class TimeIntervalFactoryTest extends TestCase
 {
     /**
+     * @var TimeIntervalFactory
+     */
+    private $factory;
+    /**
+     * @var DateTimeImmutable
+     */
+    private $dt;
+    /**
+     * @var TimeInterval
+     */
+    private $expected;
+    private $period;
+
+    /**
+     * @throws Exception
+     */
+    public function setUp()
+    {
+        $this->factory = new TimeIntervalFactory();
+        $this->dt = (new DateTimeImmutable())->modify('midnight')->modify('+5 hour');
+        $this->period = 12;
+        $this->expected = new TimeInterval(
+            $this->dt->format(ITimeInterval::FORMAT_TIME),
+            $this->period * 60,
+            ITimeInterval::UNITS_MINUTE,
+            $this->dt->modify('midnight')
+        );
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testCreateFormTimestamp()
+    {
+        $actual = $this->factory->createFormTimestamp(
+            $this->dt->getTimestamp(),
+            $this->dt->modify("+{$this->period} hour")->getTimestamp()
+        );
+        self::assertEquals($this->expected, $actual);
+    }
+
+    /**
      * @throws Exception
      */
     public function testCreate()
     {
-        $factory = new TimeIntervalFactory();
-        $dt = (new DateTimeImmutable())->modify('midnight')->modify('+5 hour');
-        $period = 12;
-        $expected = new TimeInterval(
-            $dt->format(ITimeInterval::FORMAT_TIME),
-            $period * 60,
+        $actual = $this->factory->create(
+            $this->dt->format(ITimeInterval::FORMAT_TIME),
+            $this->period * 60,
             ITimeInterval::UNITS_MINUTE,
-            $dt->modify('midnight')
+            $this->dt->modify('midnight')
         );
-
-        $actual = $factory->create($dt->getTimestamp(), $dt->modify("+{$period} hour")->getTimestamp());
-        self::assertEquals($expected, $actual);
+        self::assertEquals($this->expected, $actual);
     }
 }

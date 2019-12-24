@@ -17,7 +17,7 @@ class TimeIntervalFactory implements ITimeIntervalFactory
      * @return ITimeInterval
      * @throws Exception
      */
-    public function create(int $startTimestamp, int $endTimestamp): ITimeInterval
+    public function createFormTimestamp(int $startTimestamp, int $endTimestamp): ITimeInterval
     {
         $dt = new DateTimeImmutable();
         $start = $dt->setTimestamp($startTimestamp);
@@ -27,6 +27,24 @@ class TimeIntervalFactory implements ITimeIntervalFactory
             $minutes,
             ITimeInterval::UNITS_MINUTE,
             $start->modify('midnight')
+        );
+    }
+
+    /**
+     * @param string $startTime
+     * @param int $period
+     * @param string $units
+     * @param DateTimeImmutable|null $dt
+     * @return ITimeInterval
+     * @throws Exception
+     */
+    public function create(string $startTime, int $period, string $units = ITimeInterval::UNITS_MINUTE, DateTimeImmutable $dt = null): ITimeInterval
+    {
+        return new TimeInterval(
+            $startTime,
+            $period,
+            ITimeInterval::UNITS_MINUTE,
+            $dt
         );
     }
 }
