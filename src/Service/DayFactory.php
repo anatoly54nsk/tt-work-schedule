@@ -8,7 +8,7 @@ use App\Entity\Day;
 use App\Entity\IDay;
 use DateTimeImmutable;
 
-class DayFabric implements IDayFabric
+class DayFactory implements IDayFactory
 {
     /**
      * @param DateTimeImmutable $date

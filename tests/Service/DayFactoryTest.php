@@ -5,24 +5,24 @@ namespace App\Tests\Service;
 
 
 use App\Entity\Day;
-use App\Service\DayFabric;
+use App\Service\DayFactory;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
-class DayFabricTest extends TestCase
+class DayFactoryTest extends TestCase
 {
-    /** @var DayFabric */
-    private $fabric;
+    /** @var DayFactory */
+    private $factory;
 
     public function setUp()
     {
-        $this->fabric = new DayFabric();
+        $this->factory = new DayFactory();
     }
 
     public function testCreate()
     {
         $dt = new DateTimeImmutable();
-        $day = $this->fabric->create($dt);
+        $day = $this->factory->create($dt);
 
         self::assertInstanceOf(Day::class, $day);
     }
