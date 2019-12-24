@@ -35,7 +35,12 @@ class TimeInterval implements ITimeInterval
      * @param DateTimeImmutable | null $dt
      * @throws Exception
      */
-    public function __construct(string $startTime, int $period, string $units = self::UNITS_MINUTE, DateTimeImmutable $dt = null)
+    public function __construct(
+        string $startTime,
+        int $period,
+        string $units = self::UNITS_MINUTE,
+        DateTimeImmutable $dt = null
+    )
     {
         $this->startTime = $startTime;
         $this->period = $period;
@@ -60,14 +65,17 @@ class TimeInterval implements ITimeInterval
     {
         return [
             'start' => $this->getStartDate()->format(ITimeInterval::FORMAT_TIME),
-            'end' => $this->getStartDate()->modify("+{$this->period} {$this->units}")->format(ITimeInterval::FORMAT_TIME)
+            'end' => $this->getStartDate()->modify("+{$this->period} {$this->units}")
+                ->format(ITimeInterval::FORMAT_TIME)
         ];
     }
 
     private function getStartDate(): DateTimeImmutable
     {
         $curDate = $this->dt->format(self::FORMAT_DATE);
-        $timestamp = (DateTimeImmutable::createFromFormat(self::FORMAT_FULL, "{$curDate} {$this->startTime}"))->getTimestamp();
+        $timestamp =
+            (DateTimeImmutable::createFromFormat(self::FORMAT_FULL, "{$curDate} {$this->startTime}"))
+                ->getTimestamp();
         return $this->dt->setTimestamp($timestamp);
     }
 
