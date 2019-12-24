@@ -26,6 +26,13 @@
             <directory>src</directory>
             <exclude>
                 <file>src/Kernel.php</file>
+                <file>src/Entity/CorporateParty.php</file>
+                <file>src/Entity/Staff.php</file>
+                <file>src/Entity/Vacation.php</file>
+                <file>src/Entity/WorkSchedule.php</file>
+                <directory>src/Controller</directory>
+                <directory>src/DataFixtures</directory>
+                <directory>src/Repository</directory>
             </exclude>
         </whitelist>
     </filter>
