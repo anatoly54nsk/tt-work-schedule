@@ -43,7 +43,7 @@ class TimeIntervalFactory implements ITimeIntervalFactory
         return new TimeInterval(
             $startTime,
             $period,
-            ITimeInterval::UNITS_MINUTE,
+            $units,
             $dt
         );
     }
