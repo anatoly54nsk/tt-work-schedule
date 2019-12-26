@@ -50,18 +50,34 @@ class PositiveDayMapperTest extends TestCase
     /**
      * @dataProvider data
      * @param $dayIntervals
+     * @param $recreatedIntervals
      * @param $mapperIntervals
      * @param $expected
      * @param $dt
      * @throws Exception
      */
-    public function testMapWithoutPrevious($dayIntervals, $mapperIntervals, $expected, $dt)
+    public function testMapWithoutPrevious($dayIntervals, $recreatedIntervals, $mapperIntervals, $expected, $dt)
     {
         /** @var IDay | MockObject $day */
-        $day = $this->createMock(Day::class);
-        $day->expects($this->once())->method('getTimeRanges')->willReturn($dayIntervals);
+        $day = $this
+            ->getMockBuilder(Day::class)
+            ->setConstructorArgs([$dt])
+            ->setMethods(['getTimeRanges', 'replaceTimeRanges', 'getDt'])
+            ->getMock();
+        $day
+            ->expects($this->exactly(2))
+            ->method('getTimeRanges')
+            ->willReturnOnConsecutiveCalls(
+                $dayIntervals, $recreatedIntervals
+            );
         $day->method('getDt')->willReturn($dt);
-        $day->expects($this->once())->method('replaceTimeRanges')->with($expected);
+        $day
+            ->expects($this->exactly(2))
+            ->method('replaceTimeRanges')
+            ->withConsecutive(
+                [$this->equalTo($recreatedIntervals)],
+                [$this->equalTo($expected)],
+                );
 
         $mapper = new PositiveDayMapper($mapperIntervals, $this->factory);
         $expectedDay = $mapper->map($day);
@@ -82,6 +98,12 @@ class PositiveDayMapperTest extends TestCase
                 new TimeInterval('08:00', 4, ITimeInterval::UNITS_HOUR, $dt),
                 new TimeInterval('19:00', 1, ITimeInterval::UNITS_HOUR, $dt),
             ],
+            'recreatedIntervals' => [
+                new TimeInterval('00:00', 180, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('05:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('08:00', 240, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('19:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
             'mapperIntervals' => [
                 new TimeInterval('02:00', 7, ITimeInterval::UNITS_HOUR, $dt),
                 new TimeInterval('13:00', 3, ITimeInterval::UNITS_HOUR, $dt),
@@ -100,6 +122,12 @@ class PositiveDayMapperTest extends TestCase
                 new TimeInterval('05:00', 1, ITimeInterval::UNITS_HOUR, $dt),
                 new TimeInterval('00:00', 3, ITimeInterval::UNITS_HOUR, $dt),
             ],
+            'recreatedIntervals' => [
+                new TimeInterval('00:00', 180, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('05:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('08:00', 240, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('19:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
             'mapperIntervals' => [
                 new TimeInterval('13:00', 3, ITimeInterval::UNITS_HOUR, $dt),
                 new TimeInterval('02:00', 7, ITimeInterval::UNITS_HOUR, $dt),
@@ -116,6 +144,10 @@ class PositiveDayMapperTest extends TestCase
                 new TimeInterval('05:00', 1, ITimeInterval::UNITS_HOUR, $dt),
                 new TimeInterval('13:00', 3, ITimeInterval::UNITS_HOUR, $dt),
             ],
+            'recreatedIntervals' => [
+                new TimeInterval('05:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('13:00', 180, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
             'mapperIntervals' => [
                 new TimeInterval('13:00', 3, ITimeInterval::UNITS_HOUR, $dt),
             ],
@@ -130,6 +162,10 @@ class PositiveDayMapperTest extends TestCase
                 new TimeInterval('05:00', 1, ITimeInterval::UNITS_HOUR, $dt),
                 new TimeInterval('13:00', 3, ITimeInterval::UNITS_HOUR, $dt),
             ],
+            'recreatedIntervals' => [
+                new TimeInterval('05:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('13:00', 180, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
             'mapperIntervals' => [
                 new TimeInterval('04:00', 10, ITimeInterval::UNITS_HOUR, $dt),
             ],
@@ -143,6 +179,10 @@ class PositiveDayMapperTest extends TestCase
                 new TimeInterval('05:00', 1, ITimeInterval::UNITS_HOUR),
                 new TimeInterval('13:00', 3, ITimeInterval::UNITS_HOUR),
             ],
+            'recreatedIntervals' => [
+                new TimeInterval('05:00', 60, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+                new TimeInterval('13:00', 180, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
+            ],
             'mapperIntervals' => [
                 new TimeInterval('04:00', 10, ITimeInterval::UNITS_HOUR),
             ],
@@ -155,6 +195,9 @@ class PositiveDayMapperTest extends TestCase
         yield [
             'dayIntervals' => [
                 new TimeInterval('05:00', 1, ITimeInterval::UNITS_HOUR),
+            ],
+            'recreatedIntervals' => [
+                new TimeInterval('05:00', 60, ITimeInterval::UNITS_MINUTE, $dt->modify('+1 day')),
             ],
             'mapperIntervals' => [
             ],

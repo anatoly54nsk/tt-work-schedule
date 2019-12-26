@@ -16,9 +16,7 @@ class PositiveDayMapper extends DayMapper
      */
     public function map(IDay $day): IDay
     {
-        if ($this->previous !== null) {
-            $day = $this->previous->map($day);
-        }
+        $day = parent::map($day);
         $intervals = array_merge($day->getTimeRanges(), $this->intervals);
         if (!empty($intervals)) {
             $intervals = $this->directSort($intervals);

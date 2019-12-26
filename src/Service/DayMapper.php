@@ -35,6 +35,17 @@ abstract class DayMapper implements IDayMapper
         $this->intervalFactory = $intervalFactory;
     }
 
+    public function map(IDay $day): IDay
+    {
+        if ($this->previous !== null) {
+            $day = $this->previous->map($day);
+        } else {
+            $dayRanges = $this->directSort($day->getTimeRanges());
+            $day->replaceTimeRanges($this->mergeIntervals($dayRanges, $day));
+        }
+        return $day;
+    }
+
     public function setPrevious(IDayMapper $previous)
     {
         $this->previous = $previous;
