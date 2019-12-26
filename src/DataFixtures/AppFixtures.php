@@ -26,21 +26,21 @@ class AppFixtures extends Fixture
     {
         $corporateParties = [
             [
-                'date' => (DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, '2018-12-30'))
+                'date' => (DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, '2018-12-31'))
                     ->modify('midnight')
                     ->getTimestamp(),
                 'start' => '15:00',
                 'length' => 9,
             ],
             [
-                'date' => (DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, '2019-12-29'))
+                'date' => (DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, '2019-12-30'))
                     ->modify('midnight')
                     ->getTimestamp(),
                 'start' => '16:00',
                 'length' => 8,
             ],
             [
-                'date' => (DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, '2020-12-31'))
+                'date' => (DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, '2020-12-29'))
                     ->modify('midnight')
                     ->getTimestamp(),
                 'start' => '12:00',
