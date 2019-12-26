@@ -4,6 +4,8 @@
 namespace App\Entity;
 
 
+use DateTimeImmutable;
+
 interface IDay
 {
     const DAY_FORMAT = 'Y-m-d';
@@ -15,4 +17,8 @@ interface IDay
     public function replaceTimeRanges(array $intervals);
 
     public function getDayBeginTimestamp(): int;
+
+    public function getDay(): string;
+
+    public function getDt(): DateTimeImmutable;
 }

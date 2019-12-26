@@ -32,18 +32,12 @@ class DayTest extends TestCase
 
     public function testCreate()
     {
-        self::assertEquals($this->dt->format(IDay::DAY_FORMAT), $this->day->day);
+        self::assertEquals($this->dt->format(IDay::DAY_FORMAT), $this->day->getDay());
     }
 
     public function testGetTimestamp()
     {
         self::assertEquals($this->dt->modify('midnight')->getTimestamp(), $this->day->getDayBeginTimestamp());
-    }
-
-    public function testWrongParamReadException()
-    {
-        self::expectException(Exception::class);
-        $this->day->wrongParam;
     }
 
     public function testGetTimeRanges()
@@ -84,7 +78,7 @@ class DayTest extends TestCase
         $dt->expects($this->once())->method('format')->with(ITimeInterval::FORMAT_FULL);
 
         $day = new Day($dt);
-        $expectedDt = $day->dt;
+        $expectedDt = $day->getDt();
         $expectedDt->format(ITimeInterval::FORMAT_FULL);
     }
 }

@@ -60,7 +60,7 @@ class NegativeDayMapperTest extends TestCase
         /** @var IDay | MockObject $day */
         $day = $this->createMock(Day::class);
         $day->expects($this->once())->method('getTimeRanges')->willReturn($dayIntervals);
-        $day->method('__get')->with('dt')->willReturn($dt);
+        $day->method('getDt')->willReturn($dt);
         $day->expects($this->once())->method('replaceTimeRanges')->with($expected);
 
         $mapper = new NegativeDayMapper($mapperIntervals, $this->factory);

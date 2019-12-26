@@ -39,10 +39,10 @@ class NegativeDayMapper extends DayMapper
     {
         return array_reduce($positiveIntervals, function ($result, $positiveInterval) use (&$negativeIntervals, $day) {
             /** @var ITimeInterval $positiveInterval */
-            $positiveInterval->setDate($day->dt);
+            $positiveInterval->setDate($day->getDt());
             if (count($negativeIntervals) > 0) {
                 foreach ($negativeIntervals as $negativeInterval) {
-                    $negativeInterval->setDate($day->dt);
+                    $negativeInterval->setDate($day->getDt());
                     $negativeIntervals = $this->deleteNegInterval(
                         $positiveInterval,
                         $negativeInterval,

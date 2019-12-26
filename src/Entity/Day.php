@@ -5,7 +5,6 @@ namespace App\Entity;
 
 
 use DateTimeImmutable;
-use Exception;
 use JsonSerializable;
 
 /**
@@ -29,26 +28,6 @@ class Day implements IDay, JsonSerializable
     }
 
     /**
-     * @param $name
-     * @return string
-     * @throws Exception
-     */
-    public function __get($name)
-    {
-        switch ($name) {
-            case 'day':
-                $value = $this->dt->format(self::DAY_FORMAT);
-                break;
-            case 'dt':
-                $value = $this->dt;
-                break;
-            default:
-                throw new Exception("Field '{$name}' not exists in Day entity.");
-        }
-        return $value;
-    }
-
-    /**
      * @inheritDoc
      */
     public function getTimeRanges(): array
@@ -69,6 +48,16 @@ class Day implements IDay, JsonSerializable
      */
     public function jsonSerialize()
     {
-        return ['day' => $this->day, 'timeRanges' => $this->timeRanges];
+        return ['day' => $this->getDay(), 'timeRanges' => $this->timeRanges];
+    }
+
+    public function getDay(): string
+    {
+        return $this->dt->format(self::DAY_FORMAT);
+    }
+
+    public function getDt(): DateTimeImmutable
+    {
+        return $this->dt;
     }
 }
