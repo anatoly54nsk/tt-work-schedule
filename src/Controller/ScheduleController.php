@@ -4,15 +4,19 @@
 namespace App\Controller;
 
 
+use App\Entity\CorporateParty;
 use App\Entity\IDay;
 use App\Entity\ITimeInterval;
 use App\Entity\Vacation;
 use App\Entity\WorkSchedule;
+use App\Repository\CorporatePartyRepository;
 use App\Repository\VacationRepository;
+use App\Service\CorporatePartyDayMapper;
 use App\Service\DayFilter;
 use App\Service\DayMapHandler;
 use App\Service\ICalendarApi;
 use App\Service\IDayFactory;
+use App\Service\IDayMapper;
 use App\Service\ITimeIntervalFactory;
 use App\Service\NegativeDayFilterHandler;
 use App\Service\NegativeDayMapper;
@@ -94,6 +98,9 @@ class ScheduleController extends AbstractController
 
         $positiveMapper = new PositiveDayMapper([$workInterval], $this->timeIntervalFactory);
         $negativeMapper = new NegativeDayMapper([$lunchBreakInterval], $this->timeIntervalFactory, $positiveMapper);
+
+        $negativeMapper = $this->addPartiesMapper($dtBegin, $dtEnd, $negativeMapper, $this->timeIntervalFactory);
+
         $mapHandler = new DayMapHandler($negativeMapper);
         $days = $mapHandler->map($days);
 
@@ -160,5 +167,28 @@ class ScheduleController extends AbstractController
             }
         }
         return $days;
+    }
+
+    private function addPartiesMapper(
+        DateTimeImmutable $dtBegin,
+        DateTimeImmutable $dtEnd,
+        IDayMapper $negativeMapper,
+        ITimeIntervalFactory $factory
+    )
+    {
+        /** @var CorporatePartyRepository $corporatePartyRepo */
+        $corporatePartyRepo = $this->getDoctrine()->getRepository(CorporateParty::class);
+        $parties = $corporatePartyRepo->findBetweenDates($dtBegin, $dtEnd);
+        $previous = $negativeMapper;
+        if (!empty($parties)) {
+            foreach ($parties as $party) {
+                /** @var CorporateParty $party */
+                $dt = (new DateTimeImmutable())->setTimestamp($party->getDate())->modify('midnight');
+                $interval = $factory->create($party->getStart(), $party->getLength(), ITimeInterval::UNITS_HOUR);
+                $previous = new CorporatePartyDayMapper([$interval], $factory, $previous);
+                $previous->setDate($dt);
+            }
+        }
+        return $previous;
     }
 }
