@@ -11,6 +11,7 @@ use App\Entity\WorkSchedule;
 use App\Repository\VacationRepository;
 use App\Service\DayFilter;
 use App\Service\DayMapHandler;
+use App\Service\ICalendarApi;
 use App\Service\IDayFactory;
 use App\Service\ITimeIntervalFactory;
 use App\Service\NegativeDayFilterHandler;
@@ -20,6 +21,7 @@ use DateTimeImmutable;
 use Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
 class ScheduleController extends AbstractController
@@ -32,34 +34,48 @@ class ScheduleController extends AbstractController
      * @var ITimeIntervalFactory
      */
     private $timeIntervalFactory;
+    /**
+     * @var ICalendarApi
+     */
+    private $calendarApi;
 
-    public function __construct(IDayFactory $dayFactory, ITimeIntervalFactory $timeIntervalFactory)
+    public function __construct(IDayFactory $dayFactory, ITimeIntervalFactory $timeIntervalFactory, ICalendarApi $calendarApi)
     {
         $this->dayFactory = $dayFactory;
         $this->timeIntervalFactory = $timeIntervalFactory;
+        $this->calendarApi = $calendarApi;
     }
 
     /**
      * @Route("/schedule")
+     * @param Request $request
+     * @return JsonResponse
      */
-    public function index()
+    public function index(Request $request)
     {
-        $dateBegin = '2019-04-01';
-        $dateEnd = '2019-09-01';
-        $staffId = 2;
+        $dateBegin = $request->query->get('startDate');
+        $dateEnd = $request->query->get('endDate');
+        $staffId = $request->query->get('userId');
 
         $dtBegin = DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, $dateBegin)
             ->modify('midnight');
         $dtEnd = DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, $dateEnd)
             ->modify('midnight');
 
-        $days = $this->getDays($dtBegin, $dtEnd);
+        $days = $this->getDays($dtBegin, $dtEnd, true);
 
         try {
             $excludedDates = $this->getVacationDates($staffId, $dtBegin, $dtEnd);
         } catch (Exception $e) {
             return new JsonResponse(['error' => "({$e->getCode()}): {$e->getMessage()}"]);
         }
+
+        $holidays = $this->calendarApi->getHolidays($dtBegin, $dtEnd);
+        $excludedDates = array_merge($excludedDates, $holidays);
+
+        $filter = new DayFilter($excludedDates);
+        $filterHandler = new NegativeDayFilterHandler($filter);
+        $days = $filterHandler->filter($days);
 
         $workSchedulesRepo = $this->getDoctrine()->getRepository(WorkSchedule::class);
         /** @var WorkSchedule $workSchedule */
@@ -75,10 +91,6 @@ class ScheduleController extends AbstractController
             $workSchedule->getLunchBreakStart(),
             $workSchedule->getLunchBreakLength()
         );
-
-        $filter = new DayFilter($excludedDates);
-        $filterHandler = new NegativeDayFilterHandler($filter);
-        $days = $filterHandler->filter($days);
 
         $positiveMapper = new PositiveDayMapper([$workInterval], $this->timeIntervalFactory);
         $negativeMapper = new NegativeDayMapper([$lunchBreakInterval], $this->timeIntervalFactory, $positiveMapper);
@@ -125,11 +137,13 @@ class ScheduleController extends AbstractController
      * @param DateTimeImmutable $dtBegin
      * @param DateTimeImmutable $dtEnd
      * @param IDay[] $days
+     * @param bool $excludeWeekends
      * @return array
      */
     private function getDays(
         DateTimeImmutable $dtBegin,
         DateTimeImmutable $dtEnd,
+        $excludeWeekends = false,
         array $days = []
     ): array
     {
@@ -137,6 +151,10 @@ class ScheduleController extends AbstractController
             $start = $dtBegin;
             $end = $dtEnd->getTimestamp();
             while ($start->getTimestamp() <= $end) {
+                if ($excludeWeekends && ((int)$start->format('w') === 0 || (int)$start->format('w') === 6)) {
+                    $start = $start->modify('+1 day');
+                    continue;
+                }
                 $days[] = $this->dayFactory->create($start);
                 $start = $start->modify('+1 day');
             }
