@@ -30,3 +30,7 @@ services:
         class: App\Service\DayFactory
     App\Service\ITimeIntervalFactory:
         class: App\Service\TimeIntervalFactory
+    App\Service\ICalendarApi:
+        class: App\Service\GoogleCalendarApi
+    Symfony\Contracts\HttpClient\HttpClientInterface:
+        class: Symfony\Component\HttpClient\NativeHttpClient

@@ -103,7 +103,7 @@
         "version": "2.2.3"
     },
     "php": {
-        "version": "7.3"
+        "version": "7.4"
     },
     "sensio/framework-extra-bundle": {
         "version": "5.2",
@@ -119,6 +119,12 @@
     },
     "symfony/doctrine-bridge": {
         "version": "v5.0.2"
+    },
+    "symfony/http-client": {
+        "version": "v5.0.2"
+    },
+    "symfony/http-client-contracts": {
+        "version": "v2.0.1"
     },
     "symfony/maker-bundle": {
         "version": "1.0",
