@@ -11,15 +11,16 @@ use App\Entity\Vacation;
 use App\Entity\WorkSchedule;
 use App\Repository\CorporatePartyRepository;
 use App\Repository\VacationRepository;
-use App\Service\CorporatePartyDayMapper;
 use App\Service\DayFilter;
 use App\Service\DayMapHandler;
 use App\Service\ICalendarApi;
 use App\Service\IDayFactory;
 use App\Service\IDayMapper;
 use App\Service\ITimeIntervalFactory;
+use App\Service\NegativeCorporatePartyDayMapper;
 use App\Service\NegativeDayFilterHandler;
 use App\Service\NegativeDayMapper;
+use App\Service\PositiveCorporatePartyDayMapper;
 use App\Service\PositiveDayMapper;
 use DateTimeImmutable;
 use Exception;
@@ -55,54 +56,99 @@ class ScheduleController extends AbstractController
      * @param Request $request
      * @return JsonResponse
      */
-    public function index(Request $request)
+    public function workSchedule(Request $request)
     {
-        $dateBegin = $request->query->get('startDate');
-        $dateEnd = $request->query->get('endDate');
-        $staffId = $request->query->get('userId');
+        try {
+            list ($dateBegin, $dateEnd, $staffId) = $this->getFromRequestParams($request);
+        } catch (Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()]);
+        }
 
-        $dtBegin = DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, $dateBegin)
-            ->modify('midnight');
-        $dtEnd = DateTimeImmutable::createFromFormat(ITimeInterval::FORMAT_DATE, $dateEnd)
-            ->modify('midnight');
-
-        $days = $this->getDays($dtBegin, $dtEnd, true);
+        $days = $this->dayFactory->createDaysByRange($dateBegin, $dateEnd, $this->dayFactory::MODE_WITHOUT_WEEKENDS);
 
         try {
-            $excludedDates = $this->getVacationDates($staffId, $dtBegin, $dtEnd);
+            $excludedDates = $this->getVacationDates($staffId, $dateBegin, $dateEnd);
         } catch (Exception $e) {
             return new JsonResponse(['error' => "({$e->getCode()}): {$e->getMessage()}"]);
         }
 
-        $holidays = $this->calendarApi->getHolidays($dtBegin, $dtEnd);
+        $holidays = $this->calendarApi->getHolidays($dateBegin, $dateEnd);
         $excludedDates = array_merge($excludedDates, $holidays);
 
         $filter = new DayFilter($excludedDates);
         $filterHandler = new NegativeDayFilterHandler($filter);
         $days = $filterHandler->filter($days);
 
-        $workSchedulesRepo = $this->getDoctrine()->getRepository(WorkSchedule::class);
-        /** @var WorkSchedule $workSchedule */
-        $workSchedule = $workSchedulesRepo->findOneBy(['staff' => $staffId]);
-
-        /** @var ITimeInterval $workInterval */
-        $workInterval = $this->timeIntervalFactory->create(
-            $workSchedule->getWorkDayStart(),
-            $workSchedule->getWorkDayLength()
-        );
-        /** @var ITimeInterval $lunchBreakInterval */
-        $lunchBreakInterval = $this->timeIntervalFactory->create(
-            $workSchedule->getLunchBreakStart(),
-            $workSchedule->getLunchBreakLength()
-        );
+        try {
+            list($workInterval, $lunchBreakInterval) = $this->getWorkSheduleIntervals($staffId);
+        } catch (Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()]);
+        }
 
         $positiveMapper = new PositiveDayMapper([$workInterval], $this->timeIntervalFactory);
         $negativeMapper = new NegativeDayMapper([$lunchBreakInterval], $this->timeIntervalFactory, $positiveMapper);
 
-        $negativeMapper = $this->addPartiesMapper($dtBegin, $dtEnd, $negativeMapper, $this->timeIntervalFactory);
+        $negativeMapper = $this->addPartiesMapper($dateBegin, $dateEnd, $negativeMapper, $this->timeIntervalFactory);
 
         $mapHandler = new DayMapHandler($negativeMapper);
         $days = $mapHandler->map($days);
+
+        return new JsonResponse($days);
+    }
+
+    /**
+     * @Route("/rest-schedule")
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function restSchedule(Request $request)
+    {
+        try {
+            list ($dateBegin, $dateEnd, $staffId) = $this->getFromRequestParams($request);
+        } catch (Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()]);
+        }
+
+        $fullDayInterval = $this->timeIntervalFactory->create('00:00', 24, ITimeInterval::UNITS_HOUR);
+
+        $restDays = $this->dayFactory->createDaysByRange($dateBegin, $dateEnd, $this->dayFactory::MODE_WEEKENDS);
+        $holidays = $this->calendarApi->getHolidays($dateBegin, $dateEnd);
+        $restDays = $this->dayFactory->createFromDatesArray($holidays, $this->dayFactory::MODE_WITHOUT_WEEKENDS, $restDays);
+        $restDayMapper = new PositiveDayMapper([$fullDayInterval], $this->timeIntervalFactory);
+
+        $restMapHandler = new DayMapHandler($restDayMapper);
+        $restDays = $restMapHandler->map($restDays);
+
+        $workDays = $this->dayFactory->createDaysByRange($dateBegin, $dateEnd, $this->dayFactory::MODE_WITHOUT_WEEKENDS);
+        $filter = new DayFilter($holidays);
+        $filterHandler = new NegativeDayFilterHandler($filter);
+        $workDays = $filterHandler->filter($workDays);
+
+        try {
+            list($workInterval, $lunchBreakInterval) = $this->getWorkSheduleIntervals($staffId);
+        } catch (Exception $e) {
+            return new JsonResponse(['error' => $e->getMessage()]);
+        }
+
+        $mapper = new PositiveDayMapper([$fullDayInterval], $this->timeIntervalFactory);
+        $mapper = new NegativeDayMapper(
+            [$workInterval], $this->timeIntervalFactory, $mapper
+        );
+        $mapper = $this
+            ->addPartiesMapper($dateBegin, $dateEnd, $mapper, $this->timeIntervalFactory, true);
+        $mapper = new PositiveDayMapper(
+            [$lunchBreakInterval], $this->timeIntervalFactory, $mapper
+        );
+        $dayMapHandler = new DayMapHandler($mapper);
+        $days = array_merge($restDays, $dayMapHandler->map($workDays));
+
+        usort($days, function ($dayA, $dayB) {
+            /**
+             * @var IDay $dayA
+             * @var IDay $dayB
+             */
+            return $dayA->getDt()->getTimestamp() - $dayB->getDt()->getTimestamp();
+        });
 
         return new JsonResponse($days);
     }
@@ -141,54 +187,92 @@ class ScheduleController extends AbstractController
     }
 
     /**
-     * @param DateTimeImmutable $dtBegin
-     * @param DateTimeImmutable $dtEnd
-     * @param IDay[] $days
-     * @param bool $excludeWeekends
+     * @param Request $request
      * @return array
+     * @throws Exception
      */
-    private function getDays(
-        DateTimeImmutable $dtBegin,
-        DateTimeImmutable $dtEnd,
-        $excludeWeekends = false,
-        array $days = []
-    ): array
+    private function getFromRequestParams(Request $request)
     {
-        if ($dtBegin->getTimestamp() <= $dtEnd->getTimestamp()) {
-            $start = $dtBegin;
-            $end = $dtEnd->getTimestamp();
-            while ($start->getTimestamp() <= $end) {
-                if ($excludeWeekends && ((int)$start->format('w') === 0 || (int)$start->format('w') === 6)) {
-                    $start = $start->modify('+1 day');
-                    continue;
-                }
-                $days[] = $this->dayFactory->create($start);
-                $start = $start->modify('+1 day');
-            }
+        if (!$request->query->get('startDate')) {
+            throw new Exception("Parameter startDate require.");
         }
-        return $days;
+        if (!$request->query->get('endDate')) {
+            throw new Exception("Parameter endDate require.");
+        }
+        if (!$request->query->get('userId')) {
+            throw new Exception("Parameter userId require.");
+        }
+
+        return [
+            DateTimeImmutable::createFromFormat(
+                ITimeInterval::FORMAT_DATE,
+                $request->query->get('startDate')
+            )
+                ->modify('midnight'),
+            DateTimeImmutable::createFromFormat(
+                ITimeInterval::FORMAT_DATE,
+                $request->query->get('endDate')
+            )
+                ->modify('+1 day')
+                ->modify('midnight -1 second'),
+            $request->query->get('userId'),
+        ];
     }
 
     private function addPartiesMapper(
         DateTimeImmutable $dtBegin,
         DateTimeImmutable $dtEnd,
-        IDayMapper $negativeMapper,
-        ITimeIntervalFactory $factory
+        IDayMapper $previousMapper,
+        ITimeIntervalFactory $factory,
+        $workTime = false
     )
     {
         /** @var CorporatePartyRepository $corporatePartyRepo */
         $corporatePartyRepo = $this->getDoctrine()->getRepository(CorporateParty::class);
         $parties = $corporatePartyRepo->findBetweenDates($dtBegin, $dtEnd);
-        $previous = $negativeMapper;
+        $previous = $previousMapper;
         if (!empty($parties)) {
             foreach ($parties as $party) {
                 /** @var CorporateParty $party */
                 $dt = (new DateTimeImmutable())->setTimestamp($party->getDate())->modify('midnight');
                 $interval = $factory->create($party->getStart(), $party->getLength(), ITimeInterval::UNITS_HOUR);
-                $previous = new CorporatePartyDayMapper([$interval], $factory, $previous);
+                if ($workTime) {
+                    $previous = new PositiveCorporatePartyDayMapper([$interval], $factory, $previous);
+                } else {
+                    $previous = new NegativeCorporatePartyDayMapper([$interval], $factory, $previous);
+                }
                 $previous->setDate($dt);
             }
         }
         return $previous;
+    }
+
+    /**
+     * @param $staffId
+     * @return array
+     * @throws Exception
+     */
+    private function getWorkSheduleIntervals($staffId): array
+    {
+        $result = [];
+
+        $workSchedulesRepo = $this->getDoctrine()->getRepository(WorkSchedule::class);
+        /** @var WorkSchedule $workSchedule */
+        $workSchedule = $workSchedulesRepo->findOneBy(['staff' => $staffId]);
+
+        if (empty($workSchedule)) {
+            throw new Exception("Work schedule for staff with id: {$staffId} not exists.");
+        }
+        /** @var ITimeInterval $workInterval */
+        $result[] = $this->timeIntervalFactory->create(
+            $workSchedule->getWorkDayStart(),
+            $workSchedule->getWorkDayLength()
+        );
+        /** @var ITimeInterval $lunchBreakInterval */
+        $result[] = $this->timeIntervalFactory->create(
+            $workSchedule->getLunchBreakStart(),
+            $workSchedule->getLunchBreakLength()
+        );
+        return $result;
     }
 }
