@@ -36,8 +36,8 @@ class NegativeDayMapperTest extends TestCase
     {
         /** @var IDay | MockObject $day */
         $day = $this->createMock(Day::class);
-        $day->expects($this->exactly(1))->method('getTimeRanges')->willReturn([]);
-        $day->expects($this->once())->method('replaceTimeRanges');
+        $day->expects($this->exactly(2))->method('getTimeRanges')->willReturnOnConsecutiveCalls([], []);
+        $day->expects($this->exactly(2))->method('replaceTimeRanges');
 
         /** @var IDayMapper | MockObject $previousMapper */
         $previousMapper = $this->createMock(NegativeDayMapper::class);
@@ -59,12 +59,6 @@ class NegativeDayMapperTest extends TestCase
     public function testMapWithoutPrevious($dayIntervals, $recreatedIntervals, $mapperIntervals, $expected, $dt)
     {
         /** @var IDay | MockObject $day */
-//        $day = $this->createMock(Day::class);
-//        $day->expects($this->once())->method('getTimeRanges')->willReturn($dayIntervals);
-//        $day->method('getDt')->willReturn($dt);
-//        $day->expects($this->once())->method('replaceTimeRanges')->with($expected);
-
-        /** @var IDay | MockObject $day */
         $day = $this
             ->getMockBuilder(Day::class)
             ->setConstructorArgs([$dt])
@@ -82,7 +76,7 @@ class NegativeDayMapperTest extends TestCase
             ->method('replaceTimeRanges')
             ->withConsecutive(
                 [$this->equalTo($recreatedIntervals)],
-                [$this->equalTo($expected)],
+                [$this->equalTo($expected)]
                 );
         $mapper = new NegativeDayMapper($mapperIntervals, $this->factory);
         $expectedDay = $mapper->map($day);

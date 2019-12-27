@@ -17,9 +17,7 @@ class NegativeDayMapper extends DayMapper
     public function map(IDay $day): IDay
     {
         $day = parent::map($day);
-        $mapperRanges = $this->directSort($this->intervals);
-        $mapperRanges = $this->mergeIntervals($mapperRanges, $day);
-        $intervals = $this->excludeIntervals($day->getTimeRanges(), $mapperRanges, $day);
+        $intervals = $this->excludeIntervals($day->getTimeRanges(), $this->intervals, $day);
         $day->replaceTimeRanges($intervals);
         return $day;
     }

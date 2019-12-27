@@ -36,8 +36,8 @@ class PositiveDayMapperTest extends TestCase
     {
         /** @var IDay | MockObject $day */
         $day = $this->createMock(Day::class);
-        $day->expects($this->exactly(1))->method('getTimeRanges')->willReturn([]);
-        $day->expects($this->never())->method('replaceTimeRanges');
+        $day->expects($this->exactly(2))->method('getTimeRanges')->willReturnOnConsecutiveCalls([], []);
+        $day->expects($this->exactly(1))->method('replaceTimeRanges')->with([]);
 
         /** @var IDayMapper | MockObject $previousMapper */
         $previousMapper = $this->createMock(PositiveDayMapper::class);
@@ -76,8 +76,8 @@ class PositiveDayMapperTest extends TestCase
             ->method('replaceTimeRanges')
             ->withConsecutive(
                 [$this->equalTo($recreatedIntervals)],
-                [$this->equalTo($expected)],
-                );
+                [$this->equalTo($expected)]
+            );
 
         $mapper = new PositiveDayMapper($mapperIntervals, $this->factory);
         $expectedDay = $mapper->map($day);
@@ -206,6 +206,25 @@ class PositiveDayMapperTest extends TestCase
                     $dt->modify('+1 day')),
             ],
             'dt' => $dt->modify('+1 day'),
+        ];
+        yield [
+            'dayIntervals' => [
+                new TimeInterval('00:00', 8, ITimeInterval::UNITS_HOUR),
+                new TimeInterval('17:00', 5, ITimeInterval::UNITS_HOUR),
+            ],
+            'recreatedIntervals' => [
+                new TimeInterval('00:00', 480, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('17:00', 300, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'mapperIntervals' => [
+                new TimeInterval('12:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'expected' => [
+                new TimeInterval('00:00', 480, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('12:00', 60, ITimeInterval::UNITS_MINUTE, $dt),
+                new TimeInterval('17:00', 300, ITimeInterval::UNITS_MINUTE, $dt),
+            ],
+            'dt' => $dt,
         ];
     }
 }

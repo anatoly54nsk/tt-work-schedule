@@ -44,10 +44,11 @@ abstract class DayMapper implements IDayMapper
     {
         if ($this->previous !== null) {
             $day = $this->previous->map($day);
-        } else {
-            $dayRanges = $this->directSort($day->getTimeRanges());
-            $day->replaceTimeRanges($this->mergeIntervals($dayRanges, $day));
         }
+        $dayRanges = $this->directSort($day->getTimeRanges());
+        $day->replaceTimeRanges($this->mergeIntervals($dayRanges, $day));
+        $this->intervals = $this->directSort($this->intervals);
+        $this->intervals = $this->mergeIntervals($this->intervals, $day);
         return $day;
     }
 
@@ -115,7 +116,7 @@ abstract class DayMapper implements IDayMapper
         return array_reduce($positiveIntervals, function ($result, $positiveInterval) use (&$negativeIntervals, $day) {
             /** @var ITimeInterval $positiveInterval */
             $positiveInterval->setDate($day->getDt());
-            if (count($negativeIntervals) > 0) {
+            if (!empty($negativeIntervals)) {
                 foreach ($negativeIntervals as $negativeInterval) {
                     $negativeInterval->setDate($day->getDt());
                     $negativeIntervals = $this->deleteNegInterval(
