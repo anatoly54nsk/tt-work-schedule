@@ -8,7 +8,7 @@ use App\Entity\IDay;
 use DateTimeImmutable;
 use Exception;
 
-class CorporatePartyDayMapper extends DayMapper
+class NegativeCorporatePartyDayMapper extends DayMapper
 {
     /**
      * @var DateTimeImmutable

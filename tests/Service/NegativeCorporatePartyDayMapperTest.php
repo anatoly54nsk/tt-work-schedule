@@ -8,13 +8,14 @@ use App\Entity\Day;
 use App\Entity\IDay;
 use App\Entity\ITimeInterval;
 use App\Entity\TimeInterval;
-use App\Service\CorporatePartyDayMapper;
+use App\Service\NegativeCorporatePartyDayMapper;
 use App\Service\TimeIntervalFactory;
 use DateTimeImmutable;
 use Exception;
+use Generator;
 use PHPUnit\Framework\TestCase;
 
-class CorporatePartyDayMapperTest extends TestCase
+class NegativeCorporatePartyDayMapperTest extends TestCase
 {
     /**
      * @dataProvider data
@@ -28,7 +29,7 @@ class CorporatePartyDayMapperTest extends TestCase
      */
     public function testMap($day, $mapperIntervals, $setDate, $dayIntervals, $dt, $expected)
     {
-        $mapper = new CorporatePartyDayMapper($mapperIntervals, new TimeIntervalFactory());
+        $mapper = new NegativeCorporatePartyDayMapper($mapperIntervals, new TimeIntervalFactory());
         if ($setDate) {
             $mapper->setDate($dt);
         }
@@ -36,6 +37,10 @@ class CorporatePartyDayMapperTest extends TestCase
         self::assertEquals($expected, ($mapper->map($day))->getTimeRanges());
     }
 
+    /**
+     * @return Generator
+     * @throws Exception
+     */
     public function data()
     {
         $dt = (new DateTimeImmutable())->modify('midnight');
