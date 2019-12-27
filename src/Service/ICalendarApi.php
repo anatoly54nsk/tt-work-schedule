@@ -8,5 +8,10 @@ use DateTimeImmutable;
 
 interface ICalendarApi
 {
-    public function getHolidays(DateTimeImmutable $start, DateTimeImmutable $end);
+    /**
+     * @param DateTimeImmutable $start
+     * @param DateTimeImmutable $end
+     * @return DateTimeImmutable[]
+     */
+    public function getHolidays(DateTimeImmutable $start, DateTimeImmutable $end): array;
 }

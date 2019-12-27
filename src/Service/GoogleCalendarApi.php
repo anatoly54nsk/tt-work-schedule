@@ -6,6 +6,11 @@ namespace App\Service;
 
 use DateTimeImmutable;
 use Symfony\Component\HttpClient\NativeHttpClient;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class GoogleCalendarApi implements ICalendarApi
@@ -25,7 +30,17 @@ class GoogleCalendarApi implements ICalendarApi
         $this->httpClient = $httpClient;
     }
 
-    public function getHolidays(DateTimeImmutable $start, DateTimeImmutable $end)
+    /**
+     * @param DateTimeImmutable $start
+     * @param DateTimeImmutable $end
+     * @return DateTimeImmutable[]
+     * @throws TransportExceptionInterface
+     * @throws ClientExceptionInterface
+     * @throws DecodingExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     */
+    public function getHolidays(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         $queryParams = [
             'key' => self::API_KEY,
@@ -37,17 +52,17 @@ class GoogleCalendarApi implements ICalendarApi
         $url = $this->buildUrl(self::API_CALENDAR_EVENTS_URL, $queryParams);
         $response = $this->httpClient->request('GET', $url);
 
-        $days = [];
+        $dates = [];
         if ($response->getStatusCode() === 200) {
             $holidays = ($response->toArray())['items'];
             if (count($holidays)) {
                 foreach ($holidays as $holiday) {
-                    $days[] = (DateTimeImmutable::createFromFormat(self::FORMAT_API_CALENDAR_RESPONSE_DATE, $holiday['start']['date']))
+                    $dates[] = (DateTimeImmutable::createFromFormat(self::FORMAT_API_CALENDAR_RESPONSE_DATE, $holiday['start']['date']))
                         ->modify('midnight');
                 }
             }
         }
-        return $days;
+        return $dates;
     }
 
     private function buildUrl(string $url, array $queryParams)
